@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Gopalsing Institutional Infrastructural Information System</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="icon" type="image/x-icon" href="https://png.pngtree.com/png-clipart/20211116/original/pngtree-letter-g-logo-design-vector-png-png-image_6946247.png">
+  <style>
+    :root{--accent:#0d6efd;--muted:#6c757d}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;background:#f8fafc}
+    .hero{background:linear-gradient(180deg, rgba(13,110,253,0.06), rgba(13,110,253,0.02));padding:2.5rem 0}
+    .card-facility img{height:140px;object-fit:cover;border-radius:8px}
+    .stat{font-size:1.4rem;font-weight:700}
+    .small-muted{font-size:.85rem;color:var(--muted)}
+    .sidebar{max-height:78vh;overflow:auto}
+
+    /* simple animations */
+    .fade-in{animation:fadeInUp .6s ease both}
+    .pulse{animation:pulse 2s infinite}
+    .slide-left{animation:slideLeft .5s ease both}
+
+    @keyframes fadeInUp{ from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
+    @keyframes pulse{ 0%{transform:scale(1)}50%{transform:scale(1.03)}100%{transform:scale(1)} }
+    @keyframes slideLeft{ from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:none} }
+
+    /* responsive grid tweaks */
+    .facility-grid .card{transition:transform .18s ease,box-shadow .18s ease}
+    .facility-grid .card:hover{transform:translateY(-6px);box-shadow:0 10px 30px rgba(13,110,253,0.08)}
+
+    /* table */
+    .table-fixed{table-layout:fixed}
+    .truncate{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-white bg-white shadow-sm sticky-top">
+    <div class="container-fluid">
+      <a class="navbar-brand d-flex align-items-center gap-2" href="#">
+        <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center" style="width:40px;height:40px">II</div>
+        <div>
+          <div style="font-weight:700">IIIS</div>
+          <small class="text-muted">Gopalsing Institutional Infrastructural Information System</small>
+        </div>
+      </a>
+      <div class="d-flex ms-auto gap-2">
+        <input id="globalSearch" class="form-control form-control-sm me-2" style="max-width:260px" placeholder="Search facilities, departments...">
+        <button class="btn btn-outline-secondary btn-sm" id="exportData">Export</button>
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addFacilityModal">Add Facility</button>
+      </div>
+    </div>
+  </nav>
+
+  <header class="hero mb-3">
+    <div class="container">
+      <div class="row align-items-center">
+        <div class="col-md-8">
+          <h1 class="display-6 fw-bold fade-in">Institutional Infrastructure — Overview</h1>
+          <p class="text-muted">Centralized view of buildings, labs, classrooms, assets, utilities and maintenance schedules — with interactive search, filters and animated stats.</p>
+          <div class="d-flex gap-3 mt-3">
+            <div class="p-3 bg-white rounded shadow-sm text-center">
+              <div class="small-muted">Total Facilities</div>
+              <div id="statFacilities" class="stat text-primary pulse">0</div>
+            </div>
+            <div class="p-3 bg-white rounded shadow-sm text-center">
+              <div class="small-muted">Departments</div>
+              <div id="statDepts" class="stat">0</div>
+            </div>
+            <div class="p-3 bg-white rounded shadow-sm text-center">
+              <div class="small-muted">Assets</div>
+              <div id="statAssets" class="stat">0</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+          <div class="card shadow-sm">
+            <div class="card-body">
+              <h6 class="mb-2">Quick filters</h6>
+              <div class="d-flex gap-2 flex-wrap">
+                <button class="btn btn-sm btn-outline-primary quick-filter" data-filter="all">All</button>
+                <button class="btn btn-sm btn-outline-secondary quick-filter" data-filter="building">Buildings</button>
+                <button class="btn btn-sm btn-outline-secondary quick-filter" data-filter="lab">Labs</button>
+                <button class="btn btn-sm btn-outline-secondary quick-filter" data-filter="library">Library</button>
+                <button class="btn btn-sm btn-outline-secondary quick-filter" data-filter="sports">Sports</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container mb-5">
+    <div class="row">
+      <aside class="col-lg-3 sidebar mb-3">
+        <div class="card shadow-sm mb-3">
+          <div class="card-body">
+            <h6>Add Department</h6>
+            <div class="mb-2"><input id="deptName" class="form-control form-control-sm" placeholder="Department name"></div>
+            <div class="d-grid"><button id="addDept" class="btn btn-sm btn-primary">Add Department</button></div>
+            <hr>
+            <h6>Departments</h6>
+            <ul id="deptList" class="list-group list-group-flush"></ul>
+          </div>
+        </div>
+
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h6>Utilities</h6>
+            <div class="d-grid gap-2">
+              <button id="importBtn" class="btn btn-outline-secondary btn-sm">Import JSON</button>
+              <input type="file" id="importFile" accept="application/json" style="display:none">
+              <button id="loadDemo" class="btn btn-outline-primary btn-sm">Load Demo Data</button>
+              <button id="clearAll" class="btn btn-outline-danger btn-sm">Clear All</button>
+            </div>
+            <hr>
+            <small class="small-muted">Data is stored in your browser (localStorage). Use export/import to backup.</small>
+          </div>
+        </div>
+      </aside>
+
+      <section class="col-lg-9">
+        <div class="card shadow-sm mb-3">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h5 class="mb-0">Facilities</h5>
+              <div class="small-muted">Manage buildings, labs, rooms and assets</div>
+            </div>
+
+            <div class="mb-3 d-flex align-items-center gap-2">
+              <select id="deptFilterSelect" class="form-select form-select-sm" style="max-width:220px">
+                <option value="all">All departments</option>
+              </select>
+              <select id="typeFilterSelect" class="form-select form-select-sm" style="max-width:180px">
+                <option value="all">All types</option>
+                <option value="building">Building</option>
+                <option value="lab">Lab</option>
+                <option value="library">Library</option>
+                <option value="sports">Sports</option>
+                <option value="other">Other</option>
+              </select>
+              <div class="ms-auto small-muted">Sort by: <select id="sortSelect" class="form-select form-select-sm d-inline-block" style="width:auto"><option value="name">Name</option><option value="type">Type</option></select></div>
+            </div>
+
+            <div id="facilityGrid" class="row g-3 facility-grid"></div>
+          </div>
+        </div>
+
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h6 class="mb-3">Assets Inventory</h6>
+            <div class="table-responsive">
+              <table id="assetsTable" class="table table-hover table-sm table-fixed">
+                <thead><tr><th style="width:30%">Item</th><th style="width:20%">Facility</th><th style="width:15%">Department</th><th style="width:15%">Status</th><th style="width:20%">Actions</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </section>
+    </div>
+  </main>
+
+  <!-- Add Facility Modal -->
+  <div class="modal fade" id="addFacilityModal" tabindex="-1"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content">
+    <form id="facilityForm"><div class="modal-header"><h5 class="modal-title">Add / Edit Facility</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body row g-2">
+        <input type="hidden" id="facilityId">
+        <div class="col-md-6"><input id="facName" class="form-control" placeholder="Facility name (e.g. Main Building)"></div>
+        <div class="col-md-6"><select id="facType" class="form-select"><option value="building">Building</option><option value="lab">Lab</option><option value="library">Library</option><option value="sports">Sports</option><option value="other">Other</option></select></div>
+        <div class="col-md-6"><input id="facDept" class="form-control" placeholder="Department (optional)"></div>
+        <div class="col-md-6"><input id="facLocation" class="form-control" placeholder="Location / Block"></div>
+        <div class="col-12"><textarea id="facDesc" class="form-control" placeholder="Short description"></textarea></div>
+        <div class="col-md-6"><input id="facCapacity" type="number" class="form-control" placeholder="Capacity (e.g. seats)"></div>
+        <div class="col-md-6"><input id="facImage" class="form-control" placeholder="Image URL (optional)"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" type="submit">Save</button>
+        <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">Close</button>
+      </div></form>
+  </div></div></div>
+
+  <!-- Asset Modal -->
+  <div class="modal fade" id="assetModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+    <form id="assetForm"><div class="modal-header"><h5 class="modal-title">Add Asset</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <input type="hidden" id="assetId">
+        <div class="mb-2"><input id="assetName" class="form-control" placeholder="Item name (e.g. Projector)" required></div>
+        <div class="mb-2"><select id="assetFacility" class="form-select"></select></div>
+        <div class="mb-2"><input id="assetDept" class="form-control" placeholder="Department (optional)"></div>
+        <div class="mb-2"><select id="assetStatus" class="form-select"><option>Good</option><option>Under Maintenance</option><option>Broken</option><option>Disposed</option></select></div>
+      </div>
+      <div class="modal-footer"><button class="btn btn-primary" type="submit">Save Asset</button><button class="btn btn-secondary" data-bs-dismiss="modal" type="button">Close</button></div>
+    </form>
+  </div></div></div>
+
+  <!-- Confirm Modal -->
+  <div class="modal fade" id="confirmModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-body" id="confirmBody"></div><div class="modal-footer"><button class="btn btn-danger" id="confirmYes">Yes</button><button class="btn btn-secondary" data-bs-dismiss="modal">No</button></div></div></div></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Client-only Institutional Infrastructure Information System
+    const STORAGE_KEY = 'iiis_v1';
+    let state = { departments: [], facilities: [], assets: [] };
+
+    function uid(){ return Math.random().toString(36).slice(2,9); }
+    function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    function load(){ const raw = localStorage.getItem(STORAGE_KEY); state = raw?JSON.parse(raw):{departments:[],facilities:[],assets:[]}; }
+
+    // Init UI refs
+    const facilityGrid = document.getElementById('facilityGrid');
+    const deptList = document.getElementById('deptList');
+    const deptFilterSelect = document.getElementById('deptFilterSelect');
+    const typeFilterSelect = document.getElementById('typeFilterSelect');
+    const assetsTableBody = document.querySelector('#assetsTable tbody');
+
+    // Render stats
+    function renderStats(){ document.getElementById('statFacilities').textContent = state.facilities.length; document.getElementById('statDepts').textContent = state.departments.length; document.getElementById('statAssets').textContent = state.assets.length; }
+
+    // Render departments list
+    function renderDepts(){ deptList.innerHTML=''; deptFilterSelect.innerHTML='<option value="all">All departments</option>';
+      state.departments.forEach(d=>{ const li = document.createElement('li'); li.className='list-group-item d-flex justify-content-between align-items-center'; li.innerHTML=`<div>${escapeHtml(d.name)}</div><div><button class="btn btn-sm btn-outline-danger" data-del="${d.id}">Delete</button></div>`; deptList.appendChild(li);
+        const opt = document.createElement('option'); opt.value = d.name; opt.text = d.name; deptFilterSelect.appendChild(opt);
+      }); }
+
+    // Render facilities
+    function renderFacilities(){ facilityGrid.innerHTML=''; const typeFilter = typeFilterSelect.value; const deptFilter = deptFilterSelect.value; const search = document.getElementById('globalSearch').value.trim().toLowerCase();
+      let items = state.facilities.slice();
+      if(typeFilter!=='all') items = items.filter(i => i.type===typeFilter);
+      if(deptFilter!=='all') items = items.filter(i => (i.department||'')===deptFilter);
+      if(search) items = items.filter(i => (i.name+' '+(i.description||'')+' '+(i.department||'')).toLowerCase().includes(search));
+      // sort
+      const sortBy = document.getElementById('sortSelect').value; items.sort((a,b)=> a[sortBy]>b[sortBy]?1:-1);
+
+      for(const f of items){ const col = document.createElement('div'); col.className='col-12 col-md-6 col-lg-4'; col.innerHTML = `
+        <div class="card shadow-sm h-100 fade-in">
+          <img src="${f.image||'https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=1200&auto=format&fit=crop&s=abc'}" class="card-img-top" alt="${escapeHtml(f.name)}">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <h6 class="mb-1">${escapeHtml(f.name)}</h6>
+                <div class="small-muted truncate">${escapeHtml(f.type)} • ${escapeHtml(f.department||'—')}</div>
+              </div>
+              <div class="text-end small-muted">Cap: ${f.capacity||'—'}</div>
+            </div>
+            <p class="mt-2 mb-2 small-muted">${escapeHtml(f.description||'—')}</p>
+            <div class="d-flex gap-2">
+              <button class="btn btn-sm btn-outline-primary" data-edit="${f.id}">Edit</button>
+              <button class="btn btn-sm btn-outline-secondary" data-assets="${f.id}">Assets</button>
+              <button class="btn btn-sm btn-danger ms-auto" data-del="${f.id}">Delete</button>
+            </div>
+          </div>
+        </div>`; facilityGrid.appendChild(col); }
+    }
+
+    // Render assets table
+    function renderAssets(){ assetsTableBody.innerHTML=''; const search = document.getElementById('globalSearch').value.trim().toLowerCase(); const deptFilter = deptFilterSelect.value;
+      let rows = state.assets.slice();
+      if(deptFilter!=='all') rows = rows.filter(a => (a.department||'')===deptFilter);
+      if(search) rows = rows.filter(a => (a.name+' '+(getFacilityName(a.facilityId)||'')+' '+(a.department||'')).toLowerCase().includes(search));
+      for(const a of rows){ const tr = document.createElement('tr'); tr.innerHTML = `<td class="truncate">${escapeHtml(a.name)}</td><td class="truncate">${escapeHtml(getFacilityName(a.facilityId))}</td><td>${escapeHtml(a.department||'—')}</td><td>${escapeHtml(a.status)}</td><td><div class="d-flex gap-2"><button class="btn btn-sm btn-outline-primary" data-edit-asset="${a.id}">Edit</button><button class="btn btn-sm btn-danger" data-del-asset="${a.id}">Delete</button></div></td>`; assetsTableBody.appendChild(tr); }
+    }
+
+    function getFacilityName(id){ const f = state.facilities.find(x=>x.id===id); return f?f.name:'—'; }
+
+    // escape helper
+    function escapeHtml(s){ return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    // Event wiring
+    document.getElementById('addDept').addEventListener('click', ()=>{
+      const name = document.getElementById('deptName').value.trim(); if(!name) return alert('Department name required'); const id = uid(); state.departments.push({id,name}); document.getElementById('deptName').value=''; save(); renderDepts(); renderFacilities(); renderStats(); });
+
+    document.getElementById('deptList').addEventListener('click',(e)=>{ const del = e.target.getAttribute('data-del'); if(!del) return; if(!confirm('Delete department?')) return; state.departments = state.departments.filter(d=>d.id!==del); // remove dept from facilities and assets
+      state.facilities.forEach(f=>{ if(f.department===del) f.department=''; }); state.assets.forEach(a=>{ if(a.department===del) a.department=''; }); save(); renderDepts(); renderFacilities(); renderAssets(); renderStats(); });
+
+    // facility form submit
+    document.getElementById('facilityForm').addEventListener('submit',(e)=>{ e.preventDefault(); const id = document.getElementById('facilityId').value; const obj = { name: document.getElementById('facName').value.trim(), type: document.getElementById('facType').value, department: document.getElementById('facDept').value.trim()||'', location: document.getElementById('facLocation').value.trim(), description: document.getElementById('facDesc').value.trim(), capacity: document.getElementById('facCapacity').value||'', image: document.getElementById('facImage').value.trim()||'' };
+      if(!obj.name){ return alert('Facility name required'); }
+      if(id){ const f = state.facilities.find(x=>x.id===id); Object.assign(f, obj); } else { obj.id = uid(); state.facilities.push(obj); }
+      save(); renderFacilities(); renderAssets(); renderStats(); bootstrap.Modal.getInstance(document.getElementById('addFacilityModal')).hide(); });
+
+    // click handlers for facility grid
+    facilityGrid.addEventListener('click',(e)=>{
+      const edit = e.target.closest('[data-edit]')?.getAttribute('data-edit'); const del = e.target.closest('[data-del]')?.getAttribute('data-del'); const assets = e.target.closest('[data-assets]')?.getAttribute('data-assets');
+      if(edit){ const f = state.facilities.find(x=>x.id===edit); if(!f) return; document.getElementById('facilityId').value=f.id; document.getElementById('facName').value=f.name; document.getElementById('facType').value=f.type; document.getElementById('facDept').value=f.department||''; document.getElementById('facLocation').value=f.location||''; document.getElementById('facDesc').value=f.description||''; document.getElementById('facCapacity').value=f.capacity||''; document.getElementById('facImage').value=f.image||''; var md=new bootstrap.Modal(document.getElementById('addFacilityModal')); md.show(); }
+      if(del){ if(!confirm('Delete facility?')) return; state.facilities = state.facilities.filter(x=>x.id!==del); state.assets = state.assets.filter(a=>a.facilityId!==del); save(); renderFacilities(); renderAssets(); renderStats(); }
+      if(assets){ // open asset modal prefilled
+        document.getElementById('assetForm').reset(); document.getElementById('assetId').value=''; populateAssetFacilitySelect(); document.getElementById('assetFacility').value = assets; var md=new bootstrap.Modal(document.getElementById('assetModal')); md.show(); }
+    });
+
+    // asset form
+    function populateAssetFacilitySelect(){ const sel = document.getElementById('assetFacility'); sel.innerHTML=''; state.facilities.forEach(f=>{ const o=document.createElement('option'); o.value=f.id; o.text = f.name; sel.appendChild(o); }); if(sel.options.length===0){ const o=document.createElement('option'); o.value=''; o.text='No facilities'; sel.appendChild(o); } }
+    document.getElementById('assetForm').addEventListener('submit',(e)=>{ e.preventDefault(); const id=document.getElementById('assetId').value; const obj={ name: document.getElementById('assetName').value.trim(), facilityId: document.getElementById('assetFacility').value, department: document.getElementById('assetDept').value.trim()||'', status: document.getElementById('assetStatus').value }; if(!obj.name || !obj.facilityId){ return alert('Item name and facility required'); }
+      if(id){ const a = state.assets.find(x=>x.id===id); Object.assign(a,obj); } else { obj.id = uid(); state.assets.push(obj); }
+      save(); renderAssets(); renderStats(); bootstrap.Modal.getInstance(document.getElementById('assetModal')).hide(); });
+
+    // assets table actions
+    assetsTableBody.addEventListener('click',(e)=>{ const edit = e.target.closest('[data-edit-asset]')?.getAttribute('data-edit-asset'); const del = e.target.closest('[data-del-asset]')?.getAttribute('data-del-asset'); if(edit){ const a=state.assets.find(x=>x.id===edit); if(!a) return; document.getElementById('assetId').value=a.id; document.getElementById('assetName').value=a.name; populateAssetFacilitySelect(); document.getElementById('assetFacility').value=a.facilityId; document.getElementById('assetDept').value=a.department||''; document.getElementById('assetStatus').value=a.status||'Good'; var md=new bootstrap.Modal(document.getElementById('assetModal')); md.show(); }
+      if(del){ if(!confirm('Delete asset?')) return; state.assets = state.assets.filter(x=>x.id!==del); save(); renderAssets(); renderStats(); } });
+
+    // filters and search
+    typeFilterSelect.addEventListener('change', ()=>{ renderFacilities(); }); deptFilterSelect.addEventListener('change', ()=>{ renderFacilities(); renderAssets(); }); document.getElementById('globalSearch').addEventListener('input', ()=>{ renderFacilities(); renderAssets(); }); document.getElementById('sortSelect').addEventListener('change', renderFacilities);
+
+    // export / import
+    document.getElementById('exportData').addEventListener('click', ()=>{ const blob = new Blob([JSON.stringify(state,null,2)],{type:'application/json'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='iiis-data.json'; a.click(); URL.revokeObjectURL(url); });
+    document.getElementById('importBtn').addEventListener('click', ()=>{ document.getElementById('importFile').click(); }); document.getElementById('importFile').addEventListener('change', async (e)=>{ const f=e.target.files[0]; if(!f) return; try{ const txt = await f.text(); const data = JSON.parse(txt); if(!data) throw 0; state = data; save(); renderAll(); alert('Imported'); } catch(err){ alert('Invalid file'); } e.target.value=''; });
+
+    // demo and clear
+    document.getElementById('loadDemo').addEventListener('click', ()=>{ state = {
+      departments: [ {id:'d1',name:'Computer Science'}, {id:'d2',name:'Electronics'}, {id:'d3',name:'Mechanical'} ],
+      facilities: [ {id:'f1',name:'Main Building',type:'building',department:'',location:'Block A',description:'Administrative & classrooms',capacity:200,image:''}, {id:'f2',name:'CS Lab',type:'lab',department:'Computer Science',location:'Block B',description:'PC lab with 50 systems',capacity:50,image:''}, {id:'f3',name:'Library',type:'library',department:'',location:'Central',description:'Books and journals',capacity:150,image:''} ],
+      assets: [ {id:'a1',name:'Projector - MB101',facilityId:'f1',department:'',status:'Good'}, {id:'a2',name:'Desktop - CS Lab #12',facilityId:'f2',department:'Computer Science',status:'Under Maintenance'} ] };
+      save(); renderAll(); alert('Demo data loaded'); });
+    document.getElementById('clearAll').addEventListener('click', ()=>{ if(!confirm('Clear all data?')) return; state = {departments:[],facilities:[],assets:[]}; save(); renderAll(); });
+
+    // utility render
+    function renderAll(){ renderDepts(); renderFacilities(); renderAssets(); renderStats(); populateAssetFacilitySelect(); }
+
+    // init load
+    load(); renderAll();
+
+    // helper to open confirm modal
+    function showConfirm(message, yesCb){ document.getElementById('confirmBody').textContent = message; var md = new bootstrap.Modal(document.getElementById('confirmModal')); md.show(); document.getElementById('confirmYes').onclick = function(){ md.hide(); yesCb(); }; }
+
+    // helper: escape
+    // already defined above
+
+    // keyboard shortcut (Ctrl+D) to toggle debug
+    window.addEventListener('keydown',(e)=>{ if(e.ctrlKey && e.key.toLowerCase()==='d'){ const dbg = document.getElementById('debug'); dbg.style.display = dbg.style.display==='none'?'block':'none'; dbg.textContent = JSON.stringify(state,null,2); } });
+
+  </script>
+
+<style>
+body {
+  background-image: url("https://images.pexels.com/photos/3805358/pexels-photo-3805358.jpeg?cs=srgb&dl=pexels-thepataskar-3805358.jpg&fm=jpg");
+}
+</style>
+
+  <footer class="mt-4 text-muted small">Created✏️By Dr.Gopalsing Girase💻</footer>
+
+
+</body>
+</html>
